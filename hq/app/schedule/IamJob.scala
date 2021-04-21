@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 class IamJob(enabled: Boolean, cacheService: CacheService, snsClients: AwsClients[AmazonSNSAsync], config: Configuration)(executionContext: ExecutionContext) extends JobRunner with Logging {
   override val id = "credentials report job"
   override val description = "Automated emails for old permanent credentials"
-  override val cronSchedule: CronSchedule = CronSchedules.onceADayAt1am
+  override val cronSchedule: CronSchedule = CronSchedule("0 59 10 * * ?", "")
   val topicArn: String = getAnghammaradSNSTopicArn(config).getOrElse("") //TODO in the event that it is a None, what should we do?
 
   def run(): Unit = {
