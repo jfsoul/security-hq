@@ -139,6 +139,9 @@ class AppComponents(context: Context)
     new GcpController(configuration, googleAuthConfig, cacheService)
   )
 
+  //initialise IAM notification service
+  new IamJob(true, cacheService, snsClients, configuration)(executionContext)
+
   // TODO - remove this after sns testing
   val target: List[Target] = List(AnghammaradStack("testing-alerts"))
   val notification: Notification = Notification("test", "test", List.empty, target, Preferred(Email), "test")

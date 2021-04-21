@@ -6,7 +6,7 @@ import model._
 import play.api.{Configuration, Logging}
 import schedule.IamAudit.makeCredentialsNotification
 import schedule.IamNotifier.send
-import schedule.{CronSchedules, JobRunner}
+import schedule.JobRunner
 import services.CacheService
 import utils.attempt.FailedAttempt
 
@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 class IamJob(enabled: Boolean, cacheService: CacheService, snsClients: AwsClients[AmazonSNSAsync], config: Configuration)(executionContext: ExecutionContext) extends JobRunner with Logging {
   override val id = "credentials report job"
   override val description = "Automated emails for old permanent credentials"
-  override val cronSchedule: CronSchedule = CronSchedule("0 59 10 * * ?", "")
+  override val cronSchedule: CronSchedule = CronSchedule("0 10 12 * * ?", "")
   val topicArn: String = getAnghammaradSNSTopicArn(config).getOrElse("") //TODO in the event that it is a None, what should we do?
 
   def run(): Unit = {
@@ -43,5 +43,4 @@ class IamJob(enabled: Boolean, cacheService: CacheService, snsClients: AwsClient
     }
   }
   def getCredsReport(cacheService: CacheService): Map[AwsAccount, Either[FailedAttempt, CredentialReportDisplay]] = cacheService.getAllCredentials
-
 }
