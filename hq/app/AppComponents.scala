@@ -4,10 +4,13 @@ import com.amazonaws.regions.Regions
 import com.amazonaws.services.ec2.AmazonEC2AsyncClientBuilder
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement
 import com.google.cloud.securitycenter.v1.{SecurityCenterClient, SecurityCenterSettings}
+import com.gu.anghammarad.Anghammarad
+import com.gu.anghammarad.models.{Email, Notification, Preferred, Target, Stack => AnghammaradStack}
 import com.gu.configraun.Configraun
 import com.gu.configraun.aws.AWSSimpleSystemsManagementFactory
 import com.gu.configraun.models._
 import config.Config
+import config.Config.getAnghammaradSNSTopicArn
 import controllers._
 import filters.HstsFilter
 import model.AwsAccount
@@ -135,4 +138,10 @@ class AppComponents(context: Context)
     assets,
     new GcpController(configuration, googleAuthConfig, cacheService)
   )
+
+  // TODO - remove this after sns testing
+  val target: List[Target] = List(AnghammaradStack("testing-alerts"))
+  val notification: Notification = Notification("test", "test", List.empty, target, Preferred(Email), "test")
+  val topicArn: String = getAnghammaradSNSTopicArn(configuration).getOrElse("")
+  Anghammarad.notify(notification, topicArn)(executionContext)
 }
