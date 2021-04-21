@@ -1,6 +1,6 @@
 package schedule
 
-import com.gu.anghammarad.models.{Notification, AwsAccount => Account}
+import com.gu.anghammarad.models.{Notification, Stack, AwsAccount => Account}
 import config.Config.{iamHumanUserRotationCadence, iamMachineUserRotationCadence}
 import logic.DateUtils
 import model._
@@ -15,7 +15,7 @@ object IamAudit {
         val outdatedKeys = outdatedKeysInfo(findOldAccessKeys(credsReport))
         val missingMfa = missingMfaInfo(findMissingMfa(credsReport))
         val message = createMessage(outdatedKeys, missingMfa)
-        createNotification(Account(awsAccount.id), message)
+        createNotification(Stack("testing-alerts"), message)
       }
     }
   }

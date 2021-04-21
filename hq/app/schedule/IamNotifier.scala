@@ -15,7 +15,7 @@ object IamNotifier extends Logging {
   val channel = Preferred(Email)
 
   def createNotification(awsAccount: Target, message: String): Notification = {
-    Notification(subject, message, List.empty, List(Stack("testing-alerts")), channel, sourceSystem)
+    Notification(subject, message, List.empty, List(awsAccount), channel, sourceSystem)
   }
 
   def send(
