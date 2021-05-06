@@ -213,6 +213,17 @@ case class GcpSccConfig(orgId: String, sourceId: String)
 
 case class CronSchedule(cron: String, description: String)
 
-case class UserWithOutdatedKeys(username: String, key1LastRotation: Option[DateTime], key2LastRotation: Option[DateTime], userLastActiveDay: Option[Long])
+sealed trait IamUser
+case object Human extends IamUser
+case object Machine extends IamUser
+
+case class UserWithOutdatedKeys(
+  username: String,
+  key1LastRotation: Option[DateTime],
+  key2LastRotation: Option[DateTime],
+  userLastActiveDay: Option[Long],
+  humanOrMachineUser: IamUser
+)
+
 case class UserNoMfa(username: String, userLastActiveDay: Option[Long])
 

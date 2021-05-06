@@ -41,7 +41,8 @@ object IamAudit {
         user.username,
         user.key1.lastRotated,
         user.key2.lastRotated,
-        user.lastActivityDay
+        user.lastActivityDay,
+        Machine
       )
     }
     val humans = outdatedKeys.humanUsers.map { user =>
@@ -49,7 +50,8 @@ object IamAudit {
         user.username,
         user.key1.lastRotated,
         user.key2.lastRotated,
-        user.lastActivityDay
+        user.lastActivityDay,
+        Human
       )
     }
     machines ++ humans
