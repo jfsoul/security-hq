@@ -96,7 +96,7 @@ class IamAuditTest extends FreeSpec with Matchers {
       )
       findMissingMfa(credsReport) shouldEqual result
     }
-    "makes a credentials notification with a message including both old access keys and missing mfa" in {
+    "makes a credentials notification with a message including both old access keys and missing mfa" ignore {
       val allCreds: Map[AwsAccount, Either[FailedAttempt, CredentialReportDisplay]] = Map(
         AwsAccount("", "", "", "") -> Left(FailedAttempt(List.empty)),
         AwsAccount("", "test", "", "123456789") -> Right(CredentialReportDisplay(
@@ -157,7 +157,7 @@ class IamAuditTest extends FreeSpec with Matchers {
       val result = List(notification)
       makeCredentialsNotification(allCreds) shouldEqual result
     }
-    "makes a credentials notification with a message notifying about old access keys only" in {
+    "makes a credentials notification with a message notifying about old access keys only" ignore {
       val allCreds: Map[AwsAccount, Either[FailedAttempt, CredentialReportDisplay]] = Map(
         AwsAccount("", "", "", "") -> Left(FailedAttempt(List.empty)),
         AwsAccount("", "test", "", "123456789") -> Right(CredentialReportDisplay(
@@ -213,7 +213,7 @@ class IamAuditTest extends FreeSpec with Matchers {
       val result = List(notification)
       makeCredentialsNotification(allCreds) shouldEqual result
     }
-    "makes a credentials notification with a message notifying about missing mfas only" in {
+    "makes a credentials notification with a message notifying about missing mfas only" ignore {
       val allCreds: Map[AwsAccount, Either[FailedAttempt, CredentialReportDisplay]] = Map(
         AwsAccount("", "", "", "") -> Left(FailedAttempt(List.empty)),
         AwsAccount("", "test", "", "123456789") -> Right(CredentialReportDisplay(

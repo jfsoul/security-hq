@@ -1,6 +1,6 @@
 package schedule
 
-import com.gu.anghammarad.models.{Notification, AwsAccount => Account}
+import com.gu.anghammarad.models.{Notification, Stack, AwsAccount => Account}
 import config.Config.{iamHumanUserRotationCadence, iamMachineUserRotationCadence}
 import logic.DateUtils
 import model._
@@ -22,7 +22,7 @@ object IamAudit extends Logging {
           } else {
             logger.info(s"for ${awsAccount.name}, generating iam notification message for ${outdatedKeys.length} user(s) with outdated keys and ${missingMfa.length} user(s) with missing mfa")
             val message = createMessage(outdatedKeys, missingMfa, awsAccount)
-            Some(createNotification(awsAccount, Account(awsAccount.accountNumber), message))
+            Some(createNotification(awsAccount, Stack("testing-alerts"), message)) //Account(awsAccount.accountNumber)
           }
         case Left(error) =>
           error.failures.foreach { failure =>
