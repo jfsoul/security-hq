@@ -141,12 +141,8 @@ Resources:
       Timeout: 300
       Role: !GetAtt SecurityGroupsLambdaRole.Arn
       Code:
-        S3Bucket: !Ref SecurityHQDistBucket
-        S3Key:
-          Fn::Sub:
-          - ${path}securitygroups-lambda-${version}.jar
-          - path: !FindInMap [Constants, BucketLambdaJarPath, Value]
-            version: !Ref Version
+        S3Bucket: guardian-dist
+        S3Key: guardian/PROD/securitygroups-lambda/securitygroups-lambda-0.2.0.jar
       Environment:
         Variables:
           SnsTopicArn: !Ref SnsTopicArn
@@ -202,3 +198,9 @@ Outputs:
   SecurityHQRole:
     Description: The ARN of a role that Security HQ can assume to lookup details on this account
     Value: !GetAtt SecurityHQRole.Arn
+  LambdaKey:
+    Value:
+      Fn::Sub:
+      - ${path}securitygroups-lambda-${version}.jar
+      - path: !FindInMap [Constants, BucketLambdaJarPath, Value]
+        version: !Ref Version
