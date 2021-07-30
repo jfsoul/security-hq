@@ -298,14 +298,6 @@ case class VulnerableAccessKey(
       hasOutdatedMachineKey(List(accessKeyWithId.accessKey))
   }
 }
-object VulnerableAccessKey {
-  def isOutdated(user: VulnerableAccessKey): Boolean = {
-    if (user.humanUser) user.accessKeyWithId.accessKey.keyStatus == AccessKeyEnabled &&
-      hasOutdatedHumanKey(List(user.accessKeyWithId.accessKey))
-    else user.accessKeyWithId.accessKey.keyStatus == AccessKeyEnabled &&
-      hasOutdatedMachineKey(List(user.accessKeyWithId.accessKey))
-  }
-}
 
 sealed trait IamAuditNotificationType {def name: String}
 object Warning extends IamAuditNotificationType {val name = "Warning"}

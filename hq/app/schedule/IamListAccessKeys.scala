@@ -25,7 +25,7 @@ object IamListAccessKeys {
     Attempt.flatSequence(accessKeyData).map(addAccessKeyIds(users, _))
   }
 
-  private def addAccessKeyIds(users: Seq[VulnerableUser], accessKeyData: List[AccessKeyMetadata]): List[VulnerableAccessKey] = {
+  private def addAccessKeyIds(users: Seq[VulnerableUser], accessKeyData: List[AccessKeyMetadata]): Seq[VulnerableAccessKey] = {
     for {
       accessKey <- accessKeyData
       user <- users.find(_.username == accessKey.getUserName)
