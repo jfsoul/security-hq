@@ -1,6 +1,7 @@
 package model
 
 import com.amazonaws.regions.Region
+import com.amazonaws.services.identitymanagement.model.AccessKeyMetadata
 import com.google.cloud.securitycenter.v1.Finding.Severity
 import com.gu.anghammarad.models.{App, Notification, Stack, Target, Stage => AnghammaradStage}
 import org.joda.time.DateTime
@@ -162,6 +163,23 @@ case class AccessKeyWithId(
   accessKey: AccessKey,
   id: String
 )
+
+object AccessKeyWithId {
+  def fromAwsAccessKeyMetadata(awsAccessKeyMetadata: AccessKeyMetadata): AccessKeyWithId =
+    AccessKeyWithId(
+      AccessKey(
+        keyStatusFromString(awsAccessKeyMetadata.getStatus),
+        Option(new DateTime(awsAccessKeyMetadata.getCreateDate))
+      ),
+      awsAccessKeyMetadata.getAccessKeyId
+    )
+
+  private def keyStatusFromString(awsKeyStatus: String): KeyStatus =  awsKeyStatus match {
+    case "Active" => AccessKeyEnabled
+    case "Inactive" => AccessKeyDisabled
+    case _ => NoKey
+  }
+}
 
 sealed trait ReportStatus
 object Red extends ReportStatus

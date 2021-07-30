@@ -5,7 +5,7 @@ import aws.iam.IAMClient.SOLE_REGION
 import aws.{AwsClient, AwsClients}
 import com.amazonaws.services.identitymanagement.AmazonIdentityManagementAsync
 import com.amazonaws.services.identitymanagement.model.{AccessKeyMetadata, ListAccessKeysRequest, ListAccessKeysResult}
-import model.{AccessKeyWithId, AwsAccount, VulnerableAccessKey, VulnerableUser}
+import model.{AccessKey, AccessKeyWithId, AwsAccount, VulnerableAccessKey, VulnerableUser}
 import utils.attempt.Attempt
 
 import scala.collection.JavaConverters._
@@ -25,15 +25,18 @@ object IamListAccessKeys {
     Attempt.flatSequence(accessKeyData).map(addAccessKeyIds(users, _))
   }
 
-  private def addAccessKeyIds(users: Seq[VulnerableUser], accessKeyData: List[AccessKeyMetadata]): Seq[VulnerableAccessKey] = {
+  /*
+   Our vulnerable users are taken from an AWS "Credentials Report" which does not include Access Key IDs,
+   so here we add take the metadata from our retrieved AccessKeyMetadata and combine with user metadata
+   to create a more useful VulnerableAccessKey type
+  */
+  private def addAccessKeyIds(users: Seq[VulnerableUser], accessKeyData: List[AccessKeyMetadata]): List[VulnerableAccessKey] =
     for {
       accessKey <- accessKeyData
       user <- users.find(_.username == accessKey.getUserName)
     } yield {
-      VulnerableAccessKey(user.username, AccessKeyWithId(user.key1, accessKey.getAccessKeyId), user.humanUser)
-      VulnerableAccessKey(user.username, AccessKeyWithId(user.key2, accessKey.getAccessKeyId), user.humanUser)
+      VulnerableAccessKey(user.username, AccessKeyWithId.fromAwsAccessKeyMetadata(accessKey), user.humanUser)
     }
-  }
 
   // get the access key details for one user
   def listAccessKeys(client: AwsClient[AmazonIdentityManagementAsync], user: VulnerableUser)
