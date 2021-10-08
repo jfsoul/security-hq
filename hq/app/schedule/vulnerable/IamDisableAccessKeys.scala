@@ -18,46 +18,34 @@ import scala.util.{Failure, Success}
 
 object IamDisableAccessKeys extends Logging {
 
-  def disableAccessKeys(
-    account: AwsAccount,
-    vulnerableUsers: Seq[VulnerableUser],
-    iamClients: AwsClients[AmazonIdentityManagementAsync]
-  )(implicit ec: ExecutionContext): Unit = {
-    // this does the work of taking our vulnerable users who have been flagged as potentially needing their access keys disabled
-    // and converts that vulnerableUser into a user that has it's access key id attached to it
-    val vulnerableUserWithAccessKeyId: Attempt[List[VulnerableAccessKey]] = listAccountAccessKeys(account, vulnerableUsers, iamClients)
-    vulnerableUserWithAccessKeyId.fold ({ failure =>
-      logger.warn(s"about to disable access keys, but unable to: ${failure.failures.map(_.friendlyMessage)}")
-    },  users =>
-      users.filter(isOutdated).map { user =>
-        val key = user.accessKeyWithId
-        logger.info(s"attempting to disable access key id ${key.id}.")
-        for {
-          client <- iamClients.get(account, SOLE_REGION)
-          updateAccessKeyResult <- disableAccessKey(key, client, user.username)
-        } yield {
-          val updateAccessKeyRequestId = updateAccessKeyResult.getSdkResponseMetadata.getRequestId
-          logger.info(s"disabled access key for ${user.username} with access key id ${key.id} and request id: $updateAccessKeyRequestId.")
-        }
-      }
-    )
+  private def getOutdatedKeys(keys: List[VulnerableAccessKey]): List[VulnerableAccessKey] = keys.filter(isOutdated)
+  private def accessKeyDisableRequests(users: List[VulnerableUser], outdatedKeys: List[VulnerableAccessKey]): UpdateAccessKeyRequest = {
+    // really, I need one username and a list of their oudatedKeys, which would be max 2 items
+    ???
   }
 
-  private def disableAccessKey(key: AccessKeyWithId, client: AwsClient[AmazonIdentityManagementAsync], username: String)
-    (implicit ec: ExecutionContext): Attempt[UpdateAccessKeyResult] = {
-      val request = new UpdateAccessKeyRequest()
-        .withUserName(username)
-        .withAccessKeyId(key.id)
-        .withStatus("Inactive")
-      val eventualResult: Future[UpdateAccessKeyResult] = awsToScala(client)(_.updateAccessKeyAsync)(request)
-      eventualResult.onComplete {
-        case Failure(exception) =>
-          logger.warn(s"failed to disable access key id ${key.id} for user $username.", exception)
-          Cloudwatch.putIamDisableAccessKeyMetric(ReaperExecutionStatus.failure)
-        case Success(result) =>
-          logger.info(s"successfully disabled access key id ${key.id} for user $username. Response: ${result.toString}.")
-          Cloudwatch.putIamDisableAccessKeyMetric(ReaperExecutionStatus.success)
+  def disableAccessKeys(
+    account: AwsAccount,
+    vulnerableUsers: List[VulnerableUser],
+    iamClients: AwsClients[AmazonIdentityManagementAsync]
+  )(implicit ec: ExecutionContext): Attempt[UpdateAccessKeyResult] = {
+    val result = for {
+      accessKeys <- listAccountAccessKeys(account, vulnerableUsers, iamClients)
+      outdatedAccessKeys = getOutdatedKeys(accessKeys)
+      accessKeyDisableRequest = accessKeyDisableRequests(vulnerableUsers, outdatedAccessKeys)
+      client <- iamClients.get(account, SOLE_REGION)
+      updateAccessKeyResult <- handleAWSErrs(client)(awsToScala(client)(_.updateAccessKeyAsync)(accessKeyDisableRequest))
+    } yield updateAccessKeyResult
+    result.fold(
+      { failure =>
+        logger.error(s"Failed to disable access key: ${failure.logMessage}")
+        Cloudwatch.putIamDisableAccessKeyMetric(ReaperExecutionStatus.failure)
+      },
+      { success =>
+        logger.info(s"Successfully disabled access key in ${account.name}. Update access key request id: ${success.getSdkResponseMetadata.getRequestId}.")
+        Cloudwatch.putIamDisableAccessKeyMetric(ReaperExecutionStatus.success)
       }
-    handleAWSErrs(client)(eventualResult)
+    )
+    result
   }
 }
