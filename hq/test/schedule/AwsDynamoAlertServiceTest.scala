@@ -38,7 +38,7 @@ class AwsDynamoAlertServiceTest extends FreeSpec with BeforeAndAfterEach with Be
   "Dynamo" - {
     "initTable method" - {
       "creates a table with the correct name and properties" in {
-        dynamo.initTable()
+        val dynamo = AwsDynamoAlertService.init().value
 
         val tableDescription = client.describeTable(expectedTableName).getTable
         tableDescription.getAttributeDefinitions.asScala.toList shouldEqual List(new AttributeDefinition("id", ScalarAttributeType.S))
@@ -48,14 +48,9 @@ class AwsDynamoAlertServiceTest extends FreeSpec with BeforeAndAfterEach with Be
         tableDescription.getTableName shouldEqual expectedTableName
       }
 
-      "only creates a table when one is missing" in {
-        val initialNumberOfTables = client.listTables().getTableNames.size
-        val expectedNumberOfTables = initialNumberOfTables + 1
-
-        dynamo.initTable()
-        dynamo.initTable()
-
-        client.listTables().getTableNames.size() shouldEqual expectedNumberOfTables
+      "the second one shouldn't explode" in {
+        AwsDynamoAlertService.init()
+        AwsDynamoAlertService.init().isFailedAttempt shouldEqual false
       }
 
     }
