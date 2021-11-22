@@ -20,6 +20,11 @@ find useful scripts within the [`script`](./script) directory for common tasks.
 `-w` is supported as an optional 'watch' flag for various commands.
 `-fix` is supported as 'fix' for linting.
 
+There are also some other commands defined in `package.json`, including:
+
+- `yarn test -u` to update the snapshot tests
+- `yarn format` format the code using Prettier
+
 ## Deployment
 
 There are two stacks:
