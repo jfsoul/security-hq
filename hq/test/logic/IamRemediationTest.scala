@@ -1,16 +1,17 @@
 package logic
 
 import config.Config
-import logic.IamRemediation.{getCredsReportDisplayForAccount, identifyAllUsersWithOutdatedCredentials, identifyUsersWithOutdatedCredentials}
-import model.{AccessKey, AccessKeyDisabled, AccessKeyEnabled, AwsAccount, CredentialReportDisplay, Green, HumanUser, MachineUser, NoKey}
-import model.iamremediation.{IamUserRemediationHistory, OutdatedCredential, RemediationOperation, Warning}
+import logic.IamRemediation.{getCredsReportDisplayForAccount, identifyUsersWithOutdatedCredentials, lookupCredentialId, partitionOperationsByAllowedAccounts}
+import model.iamremediation._
+import model._
 import org.joda.time.DateTime
 import org.scalatest.{FreeSpec, Matchers}
-import utils.attempt.{FailedAttempt, Failure}
+import utils.attempt._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 
-class IamRemediationTest extends FreeSpec with Matchers {
-  "getCredsReportDisplayForAccount" - {
+class IamRemediationTest extends FreeSpec with Matchers with AttemptValues {
+ "getCredsReportDisplayForAccount" - {
     val failedAttempt: FailedAttempt = FailedAttempt(Failure("error", "error", 500))
 
     "if the either is a left, an empty list is output" in {
@@ -144,7 +145,25 @@ class IamRemediationTest extends FreeSpec with Matchers {
   }
 
   "lookupCredentialId" - {
-    "TODO" ignore {}
+    val nonMatchingAccessKey = CredentialMetadata("adam.fisher", "AKIAIOSFODNN1EXAMPLE", date.minusDays(1), CredentialActive)
+    val matchingAccessKey = CredentialMetadata("amina.adewusi", "AKIAIOSFODNN2EXAMPLE", date, CredentialActive)
+
+    "given a key creation date matches a date in the metadata, return the correct metadata" in {
+      val result = lookupCredentialId(date, List(matchingAccessKey, nonMatchingAccessKey))
+      result.value.username shouldEqual "amina.adewusi"
+    }
+    "given there are no matching key creation dates, return a failure" in {
+      val result = lookupCredentialId(date, List(nonMatchingAccessKey))
+      result.isFailedAttempt() shouldBe true
+    }
+    // both user's access keys sharing the exact same date is an edge case, because the creation date is accurate to the second
+    // and it's unlikely both keys would be created at exactly the same time, but could happen, especially if created using the CLI.
+    // If this happens then we won't know how to identify the keys' id, which is required to disable it, so we return a Failure.
+    "given a key creation date matches two dates in the metadata, return a failure" in {
+      val matchingAccessKey2 = CredentialMetadata("amina.adewusi", "AKIAIOSFODNN3EXAMPLE", date, CredentialActive)
+      val result = lookupCredentialId(date, List(matchingAccessKey2, matchingAccessKey))
+      result.isFailedAttempt() shouldBe true 
+    }
   }
 
   "formatRemediationOperation" - {
