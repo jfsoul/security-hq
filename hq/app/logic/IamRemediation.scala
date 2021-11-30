@@ -107,7 +107,7 @@ object IamRemediation extends Logging {
     */
   def lookupCredentialId(badKeyCreationDate: DateTime, userCredentials: List[CredentialMetadata]): Attempt[CredentialMetadata] = {
     userCredentials.filter { credentialMetadata =>
-      credentialMetadata.creationDate.withTimeAtStartOfDay() == badKeyCreationDate.withTimeAtStartOfDay()
+      credentialMetadata.creationDate.withMillisOfSecond(0) == badKeyCreationDate.withMillisOfSecond(0)
     } match {
       case singleMatchingKey :: Nil => Attempt.Right(singleMatchingKey)
       case Nil => Attempt.Left(FailedAttempt(Failure(
