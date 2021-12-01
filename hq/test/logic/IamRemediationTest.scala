@@ -1,9 +1,9 @@
 package logic
 
 import config.Config
-import logic.IamRemediation.{getCredsReportDisplayForAccount, identifyUsersWithOutdatedCredentials, lookupCredentialId, partitionOperationsByAllowedAccounts}
-import model.iamremediation._
+import logic.IamRemediation._
 import model._
+import model.iamremediation._
 import org.joda.time.DateTime
 import org.scalatest.{FreeSpec, Matchers}
 import utils.attempt._
@@ -155,23 +155,27 @@ class IamRemediationTest extends FreeSpec with Matchers with AttemptValues {
       result.value.username shouldEqual matchingAccessKey.username
     }
     "given there are no matching key creation dates, return a failure" in {
-      val result = lookupCredentialId(date, List(nonMatchingAccessKey))
-      result.isFailedAttempt() shouldBe true
+      val credentials = List(nonMatchingAccessKey)
+      val result = lookupCredentialId(date, credentials)
+      result.getFailedAttempt() shouldBe FailedAttempt(noMatchingCredentialFailure(credentials))
+
     }
     // both user's access keys sharing the exact same date is an edge case, because the creation date is accurate to the second
     // and it's unlikely both keys would be created at exactly the same time, but could happen, especially if created using the CLI.
     // If this happens then we won't know how to identify the keys' id, which is required to disable it, so we return a Failure.
     "given a key creation date matches two dates in the metadata, return a failure" in {
-      val result = lookupCredentialId(date, List(matchingAccessKey2, matchingAccessKey))
-      result.isFailedAttempt() shouldBe true 
+      val credentials = List(matchingAccessKey2, matchingAccessKey)
+      val result = lookupCredentialId(date, credentials)
+      result.getFailedAttempt() shouldBe FailedAttempt(multipleMatchingCredentialsFailure(credentials))
     }
     // AWS's credential's report shows that a key's last rotated date is recorded to the second,
     // so this function must seek to match to the dates up to the second, but not the millisecond.
     "given a key creation date matches to the minute, but not the second, return a failure" in {
       val keyCreationDate = new DateTime(1,1,1,1,1,1)
       val metaDataCreationDate = new DateTime(1,1,1,1,1,2)
-      val result = lookupCredentialId(keyCreationDate, List(matchingAccessKey.copy(creationDate = metaDataCreationDate)))
-      result.isFailedAttempt() shouldBe true
+      val credentials = List(matchingAccessKey.copy(creationDate = metaDataCreationDate))
+      val result = lookupCredentialId(keyCreationDate, credentials)
+      result.getFailedAttempt() shouldBe FailedAttempt(noMatchingCredentialFailure(credentials))
     }
     "given a key creation date matches to the second, but not the millisecond, return the metadata" in {
       val keyCreationDate = new DateTime(1,1,1,1,1,1,1)

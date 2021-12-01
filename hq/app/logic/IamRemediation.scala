@@ -3,7 +3,7 @@ package logic
 import config.Config
 import db.IamRemediationDb
 import model.iamremediation.{CredentialMetadata, IamUserRemediationHistory, PartitionedRemediationOperations, RemediationOperation}
-import model.{AccessKey, AccessKeyEnabled, AwsAccount, CredentialReportDisplay, IAMUser}
+import model._
 import org.joda.time.DateTime
 import play.api.Logging
 import utils.attempt.{Attempt, FailedAttempt, Failure}
@@ -98,6 +98,18 @@ object IamRemediation extends Logging {
     PartitionedRemediationOperations(allowed, forbidden)
   }
 
+  private[logic] def noMatchingCredentialFailure(userCredentials: List[CredentialMetadata]) = Failure(
+    "unable to identify matching access key in user's metadata",
+    s"I've made a list-access-keys AWS API call for ${userCredentials.map(_.username)}, but I have not found a matching key in the response.",
+    500
+  )
+
+  private[logic] def multipleMatchingCredentialsFailure(userCredentials: List[CredentialMetadata]) = Failure(
+    s"both of ${userCredentials.map(_.username)}'s access keys have the exact same creation date - cannot decide which one to select for disablement",
+    s"I've hit an edge case for ${userCredentials.map(_.username)}'s access keys where both have the same creation date, please investigate as I can't decide which one to disable.",
+    500
+  )
+
   /**
     * Users can have multiple credentials, and it can be tricky to know which one we have identified.
     * From the full metadata for all a user's keys, we can look up the AccessKey's ID by comparing the
@@ -110,19 +122,11 @@ object IamRemediation extends Logging {
       credentialMetadata.creationDate.withMillisOfSecond(0) == badKeyCreationDate.withMillisOfSecond(0)
     } match {
       case singleMatchingKey :: Nil => Attempt.Right(singleMatchingKey)
-      case Nil => Attempt.Left(FailedAttempt(Failure(
-        "unable to identify matching access key in user's metadata",
-        s"I've made a list-access-keys AWS API call for ${userCredentials.map(_.username)}, but I have not found a matching key in the response.",
-        500
-      )))
+      case Nil => Attempt.Left(noMatchingCredentialFailure(userCredentials))
       case _ =>
         // This is an edge case where both the user's access keys both have the same creation date.
         // This should be unlikely given the Credentials Reports creation dates are defined up to the second.
-        Attempt.Left(FailedAttempt(Failure(
-        s"both of ${userCredentials.map(_.username)}'s access keys have the exact same creation date - cannot decide which one to select for disablement",
-        s"I've hit an edge case for ${userCredentials.map(_.username)}'s access keys where both have the same creation date, please investigate as I can't decide which one to disable.",
-        500
-      )))
+        Attempt.Left(FailedAttempt(multipleMatchingCredentialsFailure(userCredentials)))
     }
   }
 
