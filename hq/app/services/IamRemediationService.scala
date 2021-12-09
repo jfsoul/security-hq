@@ -9,11 +9,14 @@ import db.IamRemediationDb
 import logic.IamRemediation._
 import model._
 import notifications.AnghammaradNotifications
-import org.joda.time.DateTime
-import play.api.{Configuration, Logging}
+import org.joda.time.{DateTime, DateTimeConstants}
+import play.api.inject.ApplicationLifecycle
+import play.api.{Configuration, Environment, Logging, Mode}
+import rx.lang.scala.{Observable, Subscription}
 import utils.attempt.Attempt
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.duration.{Duration, DurationInt}
 
 
 /**
@@ -28,8 +31,8 @@ import scala.concurrent.ExecutionContext
 class IamRemediationService(
   cacheService: CacheService, snsClient: AmazonSNSAsync, dynamo: IamRemediationDb,
   config: Configuration, iamClients: AwsClients[AmazonIdentityManagementAsync],
-  notificationTopicArn: String
-) extends Logging {
+  notificationTopicArn: String, lifecycle: ApplicationLifecycle, environment: Environment,
+)(implicit ec: ExecutionContext) extends Logging {
 
   /**
     * If an AWS access key has not been rotated in a long time, then will automatically disable it.
@@ -179,5 +182,22 @@ class IamRemediationService(
     val awsAccount = remediationOperation.vulnerableCandidate.awsAccount
     logger.warn(s"Remediation operation skipped because ${awsAccount.id} is not configured for remediation")
     logger.warn(s"Skipping remediation action: ${formatRemediationOperation(remediationOperation)}")
+  }
+
+  if (environment.mode != Mode.Test) {
+    val disableCredentials: Observable[DateTime] = Observable.interval(5.hours)
+      .map( _ => DateTime.now())
+      .filterNot { now =>
+        now.getDayOfWeek == DateTimeConstants.SATURDAY || now.getDayOfWeek == DateTimeConstants.SUNDAY
+      }
+
+    val tmp: Subscription = disableCredentials.subscribe { _ =>
+        disableOutdatedCredentials
+      }
+
+    lifecycle.addStopHook { () =>
+      tmp.unsubscribe()
+      Future.successful(())
+    }
   }
 }
